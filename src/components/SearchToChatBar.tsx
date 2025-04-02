@@ -1,25 +1,40 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Search } from "lucide-react";
-import ChatInterface from "./ChatInterface";
+import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
+import ChatOverlay from "./ChatOverlay";
 
 interface SearchToChatBarProps {
   className?: string;
 }
 
 const SearchToChatBar = ({ className }: SearchToChatBarProps) => {
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
-  const openChat = () => {
-    setIsChatOpen(true);
+  const openOverlay = () => {
+    setIsOverlayOpen(true);
   };
 
-  const closeChat = () => {
-    setIsChatOpen(false);
+  const closeOverlay = () => {
+    setIsOverlayOpen(false);
+    setInputValue("");
+  };
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+  };
+
+  const handleSubmit = () => {
+    if (inputValue.trim()) {
+      navigate(`/chat?q=${encodeURIComponent(inputValue)}`);
+      closeOverlay();
+    }
   };
 
   return (
@@ -32,7 +47,7 @@ const SearchToChatBar = ({ className }: SearchToChatBarProps) => {
       >
         <div className="flex-1">
           <button
-            onClick={openChat}
+            onClick={openOverlay}
             className="w-full text-left text-gray-500 focus:outline-none"
           >
             {isMobile ? "Ask about worksheets..." : "Ask me about worksheets, activities, or learning materials..."}
@@ -41,14 +56,20 @@ const SearchToChatBar = ({ className }: SearchToChatBarProps) => {
         <Button
           className="rounded-full bg-blue-600 hover:bg-blue-700"
           size="icon"
-          onClick={openChat}
+          onClick={openOverlay}
         >
           <MessageSquare className="h-5 w-5" />
           <span className="sr-only">Open chat</span>
         </Button>
       </div>
 
-      <ChatInterface isOpen={isChatOpen} onClose={closeChat} />
+      <ChatOverlay 
+        isOpen={isOverlayOpen} 
+        onClose={closeOverlay}
+        inputValue={inputValue}
+        onInputChange={handleInputChange}
+        onSubmit={handleSubmit}
+      />
     </>
   );
 };

@@ -1,18 +1,18 @@
 
 import React, { useState, useEffect, useRef } from "react";
-import ChatInput from "./ChatInput";
-import ChatMessage, { Message, MessageType } from "./ChatMessage";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import ChatMessage, { Message } from "@/components/ChatMessage";
+import ChatInput from "@/components/ChatInput";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 
-interface ChatInterfaceProps {
-  isOpen: boolean;
-  onClose: () => void;
-  className?: string;
-}
-
-const ChatInterface = ({ isOpen, onClose, className }: ChatInterfaceProps) => {
+const Chat = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const initialQuery = searchParams.get("q") || "";
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -21,9 +21,35 @@ const ChatInterface = ({ isOpen, onClose, className }: ChatInterfaceProps) => {
       timestamp: new Date(),
     },
   ]);
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Handle the initial query if present
+  useEffect(() => {
+    if (initialQuery) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: initialQuery,
+        type: "user",
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, userMessage]);
+      setIsLoading(true);
+      
+      // Simulate AI response delay
+      setTimeout(() => {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: generateResponse(initialQuery),
+          type: "assistant",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsLoading(false);
+      }, 1000);
+    }
+  }, [initialQuery]);
+
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -70,19 +96,22 @@ const ChatInterface = ({ isOpen, onClose, className }: ChatInterfaceProps) => {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className={cn("fixed inset-0 z-50 flex flex-col bg-white md:inset-auto md:right-4 md:top-24 md:h-[600px] md:w-[400px] md:rounded-lg md:border md:shadow-lg", className)}>
-      <div className="flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold">Worksheet Assistant</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close</span>
+    <div className="flex h-screen flex-col bg-gray-50">
+      <header className="sticky top-0 z-10 flex items-center gap-4 border-b bg-white p-4 shadow-sm">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/')}
+          className="md:mr-2"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">Back to home</span>
         </Button>
-      </div>
+        <h1 className="text-lg font-semibold">Worksheet Assistant</h1>
+      </header>
       
-      <div className="flex-1 overflow-y-auto p-0">
+      <div className="flex-1 overflow-y-auto">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
@@ -95,14 +124,15 @@ const ChatInterface = ({ isOpen, onClose, className }: ChatInterfaceProps) => {
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="border-t p-4">
+      <div className="border-t bg-white p-4">
         <ChatInput 
           onSendMessage={handleSendMessage} 
           isLoading={isLoading} 
+          className="mx-auto max-w-4xl"
         />
       </div>
     </div>
   );
 };
 
-export default ChatInterface;
+export default Chat;
