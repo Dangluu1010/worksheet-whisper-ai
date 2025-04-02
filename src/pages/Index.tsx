@@ -1,15 +1,70 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import WorksheetHero from "@/components/WorksheetHero";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Grid, History, Star } from "lucide-react";
+import { BookOpen, Grid, History, Star, MessageCircle } from "lucide-react";
+import { getChatThreads } from "@/services/chatService";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const recentChats = getChatThreads().slice(0, 4);
+  
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+  
+  const handleChatClick = (threadId: string) => {
+    navigate(`/chat?thread=${threadId}`);
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <WorksheetHero />
+      
+      <div className="mt-12 mb-8">
+        <h2 className="text-xl font-bold mb-4">Recent Conversations</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {recentChats.length > 0 ? (
+            recentChats.map((chat) => (
+              <Card 
+                key={chat.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleChatClick(chat.id)}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-blue-600" />
+                    <CardTitle className="text-base truncate">{chat.title}</CardTitle>
+                  </div>
+                  <CardDescription className="truncate">{chat.preview}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs text-gray-500">{formatDate(chat.timestamp)}</div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full p-6 text-center text-gray-500">
+              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No recent conversations</p>
+              <Button 
+                className="mt-4" 
+                onClick={() => navigate('/chat')}
+              >
+                Start a new chat
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
       
       <Tabs defaultValue="recents" className="mt-12">
         <TabsList className="mb-6">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import ChatMessage, { Message } from "@/components/ChatMessage";
@@ -19,6 +18,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const initialQuery = searchParams.get("q") || "";
+  const threadParam = searchParams.get("thread") || "";
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -35,12 +35,17 @@ const Chat = () => {
     const allThreads = getChatThreads();
     setThreads(allThreads);
     
-    if (initialQuery) {
+    if (threadParam) {
+      // If a specific thread is requested, load that thread
+      setActiveThreadId(threadParam);
+      setMessages(getChatMessages(threadParam));
+    } else if (initialQuery) {
+      // If there's a query but no specific thread, create a new thread
       const newThreadId = createNewThread(initialQuery);
       setActiveThreadId(newThreadId);
       setMessages(getChatMessages(newThreadId));
     } else if (allThreads.length > 0) {
-      // If there's no query but threads exist, load the most recent thread
+      // If no thread or query is specified but threads exist, load the most recent thread
       setActiveThreadId(allThreads[0].id);
       setMessages(getChatMessages(allThreads[0].id));
     } else {
@@ -49,12 +54,7 @@ const Chat = () => {
       setActiveThreadId(newThreadId);
       setMessages(getChatMessages(newThreadId));
     }
-  }, [initialQuery]);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  }, [initialQuery, threadParam]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

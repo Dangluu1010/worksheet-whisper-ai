@@ -69,11 +69,11 @@ const ChatSidebar = ({
   const groupedThreads = groupChatsByDate(threads);
   
   return (
-    <div className={cn("flex h-full w-64 flex-col bg-gray-50 border-r", className)}>
+    <div className={cn("flex h-full w-64 flex-col bg-white border-r shadow-sm", className)}>
       <div className="flex flex-col gap-2 p-3">
         <Button 
           onClick={onNewChat}
-          className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700"
+          className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700 text-white"
         >
           <PlusCircle className="h-4 w-4" />
           <span>New Chat</span>
@@ -93,7 +93,7 @@ const ChatSidebar = ({
         <div className="space-y-4">
           {Object.entries(groupedThreads).map(([dateGroup, chats]) => (
             <div key={dateGroup} className="space-y-1">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{dateGroup}</h3>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide px-2 mb-2">{dateGroup}</h3>
               
               {chats.map((thread) => (
                 <button
@@ -102,8 +102,8 @@ const ChatSidebar = ({
                   className={cn(
                     "w-full text-left p-2 rounded-md flex flex-col gap-0.5 transition-colors text-sm",
                     thread.id === activeThreadId
-                      ? "bg-blue-100 text-blue-900"
-                      : "hover:bg-gray-100 text-gray-700"
+                      ? "bg-blue-50 text-blue-700 border border-blue-100"
+                      : "hover:bg-gray-50 text-gray-700"
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -122,13 +122,17 @@ const ChatSidebar = ({
         <Button 
           variant="ghost" 
           size="sm" 
-          className="w-full justify-start gap-2 text-gray-700"
+          className="w-full justify-start gap-2 text-gray-700 hover:bg-gray-50"
           onClick={() => navigate("/")}
         >
           <Clock className="h-4 w-4" />
           <span>Chat History</span>
         </Button>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-gray-700 mt-1">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full justify-start gap-2 text-gray-700 hover:bg-gray-50 mt-1"
+        >
           <Settings className="h-4 w-4" />
           <span>Settings</span>
         </Button>
