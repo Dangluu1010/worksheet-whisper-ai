@@ -1,51 +1,53 @@
 
 import React, { useState, useEffect, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import ChatMessage, { Message } from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
+import ChatSidebar, { ChatThread } from "@/components/ChatSidebar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MenuIcon } from "lucide-react";
+import { 
+  getChatThreads, 
+  getChatMessages, 
+  createNewThread,
+  addMessageToThread 
+} from "@/services/chatService";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { SidebarProvider, useSidebar, SidebarTrigger, Sidebar, SidebarContent } from "@/components/ui/sidebar";
 
 const Chat = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const initialQuery = searchParams.get("q") || "";
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const isMobile = useIsMobile();
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      content: "Hi there! I'm your Worksheet Assistant. How can I help you find the perfect worksheets for your teaching needs today?",
-      type: "assistant",
-      timestamp: new Date(),
-    },
-  ]);
+  // Chat state
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string>("");
 
-  // Handle the initial query if present
+  // Initialize the chat threads and handle the initial query if present
   useEffect(() => {
+    const allThreads = getChatThreads();
+    setThreads(allThreads);
+    
     if (initialQuery) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        content: initialQuery,
-        type: "user",
-        timestamp: new Date(),
-      };
-      
-      setMessages((prev) => [...prev, userMessage]);
-      setIsLoading(true);
-      
-      // Simulate AI response delay
-      setTimeout(() => {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: generateResponse(initialQuery),
-          type: "assistant",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-        setIsLoading(false);
-      }, 1000);
+      const newThreadId = createNewThread(initialQuery);
+      setActiveThreadId(newThreadId);
+      setMessages(getChatMessages(newThreadId));
+    } else if (allThreads.length > 0) {
+      // If there's no query but threads exist, load the most recent thread
+      setActiveThreadId(allThreads[0].id);
+      setMessages(getChatMessages(allThreads[0].id));
+    } else {
+      // If no threads exist, create a new empty thread
+      const newThreadId = createNewThread();
+      setActiveThreadId(newThreadId);
+      setMessages(getChatMessages(newThreadId));
     }
   }, [initialQuery]);
 
@@ -59,29 +61,44 @@ const Chat = () => {
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !activeThreadId) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      type: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    // Add user message
+    addMessageToThread(activeThreadId, content, "user");
+    setMessages(getChatMessages(activeThreadId));
     setIsLoading(true);
 
     // Simulate AI response delay
     setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: generateResponse(content),
-        type: "assistant",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      const assistantResponse = generateResponse(content);
+      addMessageToThread(activeThreadId, assistantResponse, "assistant");
+      setMessages(getChatMessages(activeThreadId));
+      setThreads(getChatThreads());
       setIsLoading(false);
     }, 1000);
+  };
+
+  const handleThreadSelect = (threadId: string) => {
+    setActiveThreadId(threadId);
+    setMessages(getChatMessages(threadId));
+    if (isMobile) {
+      setShowSidebar(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    const newThreadId = createNewThread();
+    setActiveThreadId(newThreadId);
+    setMessages(getChatMessages(newThreadId));
+    
+    if (isMobile) {
+      setShowSidebar(false);
+    }
+    
+    // Clear any query params
+    if (location.search) {
+      navigate('/chat');
+    }
   };
 
   // Simple mock response function
@@ -97,41 +114,86 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
-      <header className="sticky top-0 z-10 flex items-center gap-4 border-b bg-white p-4 shadow-sm">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate('/')}
-          className="md:mr-2"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">Back to home</span>
-        </Button>
-        <h1 className="text-lg font-semibold">Worksheet Assistant</h1>
-      </header>
-      
-      <div className="flex-1 overflow-y-auto">
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
-        {isLoading && (
-          <div className="flex w-full items-center gap-3 bg-gray-50 p-4">
-            <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="flex h-screen flex-col bg-gray-50">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b bg-white p-4 shadow-sm">
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="md:hidden"
+            >
+              <MenuIcon className="h-5 w-5" />
+              <span className="sr-only">Toggle sidebar</span>
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/')}
+            className="md:mr-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="sr-only">Back to home</span>
+          </Button>
+          <h1 className="text-lg font-semibold">Worksheet Assistant</h1>
+        </header>
+        
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar - always visible on desktop, conditionally visible on mobile */}
+          <div 
+            className={`${
+              isMobile 
+                ? `fixed inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out ${
+                    showSidebar ? 'translate-x-0' : '-translate-x-full'
+                  }`
+                : 'relative'
+            }`}
+          >
+            <ChatSidebar 
+              threads={threads}
+              activeThreadId={activeThreadId}
+              onThreadSelect={handleThreadSelect}
+              onNewChat={handleNewChat}
+              className={isMobile ? 'h-screen' : 'h-[calc(100vh-4rem)]'}
+            />
           </div>
-        )}
-        <div ref={messagesEndRef} />
+          
+          {/* Mobile backdrop */}
+          {isMobile && showSidebar && (
+            <div 
+              className="fixed inset-0 z-10 bg-black/50"
+              onClick={() => setShowSidebar(false)}
+            />
+          )}
+          
+          {/* Main chat area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              {messages.map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))}
+              {isLoading && (
+                <div className="flex w-full items-center gap-3 bg-gray-50 p-4">
+                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
+                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            
+            <div className="border-t bg-white p-4">
+              <ChatInput 
+                onSendMessage={handleSendMessage} 
+                isLoading={isLoading} 
+                className="mx-auto max-w-4xl"
+              />
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <div className="border-t bg-white p-4">
-        <ChatInput 
-          onSendMessage={handleSendMessage} 
-          isLoading={isLoading} 
-          className="mx-auto max-w-4xl"
-        />
-      </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
