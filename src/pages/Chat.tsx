@@ -5,7 +5,7 @@ import ChatMessage, { Message } from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import ChatSidebar, { ChatThread } from "@/components/ChatSidebar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MenuIcon } from "lucide-react";
+import { ArrowLeft, MenuIcon, Clock } from "lucide-react";
 import { 
   getChatThreads, 
   getChatMessages, 
@@ -13,7 +13,6 @@ import {
   addMessageToThread 
 } from "@/services/chatService";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { SidebarProvider, useSidebar, SidebarTrigger, Sidebar, SidebarContent } from "@/components/ui/sidebar";
 
 const Chat = () => {
   const [searchParams] = useSearchParams();
@@ -29,6 +28,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
+  const [showHistory, setShowHistory] = useState(false);
 
   // Initialize the chat threads and handle the initial query if present
   useEffect(() => {
@@ -101,6 +101,10 @@ const Chat = () => {
     }
   };
 
+  const toggleHistory = () => {
+    setShowHistory(!showHistory);
+  };
+
   // Simple mock response function
   const generateResponse = (query: string): string => {
     const responses = [
@@ -114,86 +118,138 @@ const Chat = () => {
   };
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
-      <div className="flex h-screen flex-col bg-gray-50">
-        <header className="sticky top-0 z-10 flex items-center gap-4 border-b bg-white p-4 shadow-sm">
-          {isMobile && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="md:hidden"
-            >
-              <MenuIcon className="h-5 w-5" />
-              <span className="sr-only">Toggle sidebar</span>
-            </Button>
-          )}
+    <div className="flex h-screen flex-col bg-gray-50">
+      <header className="sticky top-0 z-10 flex items-center gap-4 border-b bg-white p-4 shadow-sm">
+        {isMobile && (
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => navigate('/')}
-            className="md:mr-2"
+            onClick={() => setShowSidebar(!showSidebar)}
+            className="md:hidden"
           >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="sr-only">Back to home</span>
+            <MenuIcon className="h-5 w-5" />
+            <span className="sr-only">Toggle sidebar</span>
           </Button>
-          <h1 className="text-lg font-semibold">Worksheet Assistant</h1>
-        </header>
+        )}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/')}
+          className="md:mr-2"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">Back to home</span>
+        </Button>
+        <h1 className="text-lg font-semibold">Worksheet Assistant</h1>
         
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar - always visible on desktop, conditionally visible on mobile */}
-          <div 
-            className={`${
-              isMobile 
-                ? `fixed inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out ${
-                    showSidebar ? 'translate-x-0' : '-translate-x-full'
-                  }`
-                : 'relative'
-            }`}
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleHistory}
+            className="ml-auto"
           >
-            <ChatSidebar 
-              threads={threads}
-              activeThreadId={activeThreadId}
-              onThreadSelect={handleThreadSelect}
-              onNewChat={handleNewChat}
-              className={isMobile ? 'h-screen' : 'h-[calc(100vh-4rem)]'}
-            />
-          </div>
-          
-          {/* Mobile backdrop */}
-          {isMobile && showSidebar && (
-            <div 
-              className="fixed inset-0 z-10 bg-black/50"
-              onClick={() => setShowSidebar(false)}
-            />
-          )}
-          
-          {/* Main chat area */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto">
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
-              {isLoading && (
-                <div className="flex w-full items-center gap-3 bg-gray-50 p-4">
-                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
-                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
+            <Clock className="h-5 w-5" />
+            <span className="sr-only">Chat History</span>
+          </Button>
+        )}
+      </header>
+      
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - always visible on desktop, conditionally visible on mobile */}
+        <div 
+          className={`${
+            isMobile 
+              ? `fixed inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out ${
+                  showSidebar ? 'translate-x-0' : '-translate-x-full'
+                }`
+              : 'relative'
+          }`}
+        >
+          <ChatSidebar 
+            threads={threads}
+            activeThreadId={activeThreadId}
+            onThreadSelect={handleThreadSelect}
+            onNewChat={handleNewChat}
+            className={isMobile ? 'h-screen' : 'h-[calc(100vh-4rem)]'}
+          />
+        </div>
+        
+        {/* Mobile backdrop */}
+        {isMobile && showSidebar && (
+          <div 
+            className="fixed inset-0 z-10 bg-black/50"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
+        
+        {/* Mobile History Overlay */}
+        {isMobile && showHistory && (
+          <div className="fixed inset-0 z-30 bg-white">
+            <div className="p-4 border-b">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleHistory}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-lg font-semibold">Chat History</h2>
+              </div>
             </div>
             
-            <div className="border-t bg-white p-4">
-              <ChatInput 
-                onSendMessage={handleSendMessage} 
-                isLoading={isLoading} 
-                className="mx-auto max-w-4xl"
-              />
+            <div className="p-4">
+              {threads.map((thread) => (
+                <button
+                  key={thread.id}
+                  className="w-full text-left p-3 mb-3 rounded-md border border-gray-200 hover:bg-gray-50"
+                  onClick={() => {
+                    handleThreadSelect(thread.id);
+                    setShowHistory(false);
+                  }}
+                >
+                  <p className="font-medium">{thread.title}</p>
+                  <p className="text-sm text-gray-500 truncate">{thread.preview}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {thread.timestamp.toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </button>
+              ))}
             </div>
+          </div>
+        )}
+        
+        {/* Main chat area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            {messages.map((message) => (
+              <ChatMessage key={message.id} message={message} />
+            ))}
+            {isLoading && (
+              <div className="flex w-full items-center gap-3 bg-gray-50 p-4">
+                <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
+                <div className="h-4 w-24 animate-pulse rounded bg-gray-200"></div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          
+          <div className="border-t bg-white p-4">
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              isLoading={isLoading} 
+              className="mx-auto max-w-4xl"
+            />
           </div>
         </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
